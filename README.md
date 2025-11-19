@@ -1,4 +1,4 @@
-# Travel Planner API
+# Planificador de viaje API
 
 API REST desarrollada con NestJS para la planificación de viajes, con gestión de países mediante caché y planes de viaje asociados.
 
