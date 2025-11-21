@@ -300,12 +300,8 @@ El Guard se valida automáticamente al intentar usar el endpoint DELETE:
 
 ### Validar el Middleware de Logging
 
-#### 1. Iniciar la aplicación
-```bash
-npm run start:dev
-```
 
-#### 2. Observar la consola mientras realizas peticiones
+#### 1. Observar la consola mientras realizas peticiones
 Ejecuta cualquier petición a las rutas protegidas:
 
 ```bash
@@ -329,7 +325,7 @@ curl -X POST http://localhost:3000/travel-plans \
 curl -X DELETE http://localhost:3000/countries/USA -H "X-API-TOKEN: mi-token-secreto"
 ```
 
-#### 3. Verificar los logs en la consola
+#### 2. Verificar los logs en la consola
 ```
 [HTTP] GET /countries - Status: 200 - 45ms
 [HTTP] GET /countries/USA - Status: 200 - 32ms
