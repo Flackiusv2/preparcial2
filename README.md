@@ -54,14 +54,6 @@ Gestiona planes de viaje asociados a países.
 - `GET /travel-plans` - Lista todos los planes
 - `GET /travel-plans/:id` - Obtiene un plan específico por ID
 
-## Tecnologías
-
-- **NestJS**: Framework backend
-- **TypeORM**: ORM para PostgreSQL
-- **PostgreSQL**: Base de datos relacional
-- **class-validator**: Validación de DTOs
-- **Axios**: Cliente HTTP para consumir API externa
-
 ## Instalación
 
 ### Prerrequisitos
@@ -91,7 +83,7 @@ CREATE DATABASE travel_planner;
 
 4. **Configurar variables de entorno**
 
-Editar el archivo `.env` con tus credenciales de PostgreSQL:
+Editar el archivo `.env` con las credenciales de PostgreSQL:
 ```env
 DB_HOST=localhost
 DB_PORT=5432
@@ -164,36 +156,6 @@ Si el país no existe en la BD, se consulta automáticamente de la API externa a
 - startDate y endDate: formato ISO 8601
 - startDate debe ser anterior a endDate
 - El país debe existir antes de crear el plan
-
-## Estructura del Proyecto
-
-```
-src/
-├── app.module.ts
-├── main.ts
-├── countries/
-│   ├── entities/country.entity.ts
-│   ├── dto/country-response.dto.ts
-│   ├── interfaces/country-provider.interface.ts
-│   ├── providers/rest-countries.provider.ts
-│   ├── countries.service.ts
-│   ├── countries.controller.ts
-│   └── countries.module.ts
-└── travel-plans/
-    ├── entities/travel-plan.entity.ts
-    ├── dto/create-travel-plan.dto.ts
-    ├── dto/travel-plan-response.dto.ts
-    ├── travel-plans.service.ts
-    ├── travel-plans.controller.ts
-    └── travel-plans.module.ts
-```
-
-
-## Notas
-
-- synchronize en TypeORM solo para desarrollo
-- Códigos de país: formato alpha-3 (COL, FRA, USA)
-- Fechas: formato ISO 8601 (YYYY-MM-DD)
 
 ---
 
@@ -381,11 +343,4 @@ Cada log muestra:
 - Código de estado de la respuesta
 - Tiempo de procesamiento en milisegundos
 
-### Modificaciones Realizadas
-- **CountriesController**: Agregado endpoint DELETE con Guard
-- **CountriesService**: Método `deleteCountry` con validaciones
-- **TravelPlansService**: Método `hasPlansForCountry` para verificar asociaciones
-- **CountriesModule**: Importación circular con TravelPlansModule usando `forwardRef`
-- **TravelPlansModule**: Exportación de TravelPlansService
-- **AppModule**: Configuración del middleware para rutas específicas
 
