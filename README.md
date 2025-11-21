@@ -188,13 +188,6 @@ src/
     └── travel-plans.module.ts
 ```
 
-## Comandos
-
-```bash
-npm run start:dev    # Desarrollo
-npm run build        # Compilar
-npm run start:prod   # Producción
-```
 
 ## Notas
 
