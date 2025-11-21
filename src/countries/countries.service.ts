@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Country } from './entities/country.entity';
@@ -79,5 +79,28 @@ export class CountriesService {
 
     country = this.countryRepository.create(countryData);
     return await this.countryRepository.save(country);
+  }
+
+  async deleteCountry(code: string, travelPlansService: any): Promise<void> {
+    const normalizedCode = code.toUpperCase();
+    this.logger.log(`Intentando eliminar país con código: ${normalizedCode}`);
+
+    const country = await this.countryRepository.findOne({
+      where: { code: normalizedCode },
+    });
+
+    if (!country) {
+      throw new NotFoundException(`País con código ${normalizedCode} no encontrado en la caché`);
+    }
+
+    const hasPlans = await travelPlansService.hasPlansForCountry(normalizedCode);
+    if (hasPlans) {
+      throw new BadRequestException(
+        `No se puede eliminar el país ${normalizedCode} porque tiene planes de viaje asociados`
+      );
+    }
+
+    await this.countryRepository.delete({ code: normalizedCode });
+    this.logger.log(`País ${normalizedCode} eliminado exitosamente de la caché`);
   }
 }

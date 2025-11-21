@@ -201,3 +201,198 @@ npm run start:prod   # Producción
 - synchronize en TypeORM solo para desarrollo
 - Códigos de país: formato alpha-3 (COL, FRA, USA)
 - Fechas: formato ISO 8601 (YYYY-MM-DD)
+
+---
+
+# Parcial 2 - Funcionalidad Avanzada
+
+## Descripción de la Ampliación
+
+Para el parcial 2 se extiende la API del preparcial (CountriesModule + TravelPlansModule) con nuevas funcionalidades críticas para la gestión segura de países en caché. Se ha implementado un sistema de eliminación protegida de países mediante un guard de autorización que valida tokens en las cabeceras HTTP, asegurando que solo peticiones autorizadas puedan modificar la base de datos. Adicionalmente, se incorporó un middleware de logging que registra toda la actividad HTTP en las rutas principales, proporcionando trazabilidad completa de las operaciones realizadas en la API. La arquitectura modular del preparcial se mantiene intacta, respetando la separación de responsabilidades entre módulos.
+
+## Nuevas Funcionalidades Implementadas
+
+### 1. Endpoint de Borrado Protegido (Parte A)
+
+#### Descripción
+Se ha agregado el endpoint `DELETE /countries/:alpha3Code` que permite eliminar países de la caché de la base de datos. Este endpoint está protegido mediante un Guard de autorización que valida la presencia y el valor correcto del header `X-API-TOKEN`.
+
+#### Características
+- **Ruta**: `DELETE /countries/:alpha3Code`
+- **Protección**: Guard de autorización (`AuthGuard`)
+- **Token requerido**: `mi-token-secreto` en el header `X-API-TOKEN`
+- **Validaciones**:
+  - Verifica que el país exista en la caché
+  - Impide el borrado si existen planes de viaje asociados
+  - Retorna error 404 si el país no existe
+  - Retorna error 400 si hay planes asociados
+  - Retorna error 401 si el token es inválido o no está presente
+
+
+### 2. Guard de Autorización
+
+#### Descripción
+El `AuthGuard` implementa la validación del token de autorización en el header `X-API-TOKEN`. Solo se aplica al endpoint de borrado de países.
+
+#### Ubicación
+`src/countries/guards/auth.guard.ts`
+
+#### Funcionamiento
+1. Intercepta la petición HTTP antes de llegar al controlador
+2. Extrae el valor del header `X-API-TOKEN`
+3. Compara con el token secreto: `mi-token-secreto`
+4. Si coincide, permite el acceso
+5. Si no coincide o no existe, lanza `UnauthorizedException` (401)
+
+### 3. Middleware de Logging (Parte B)
+
+#### Descripción
+El `LoggingMiddleware` registra automáticamente toda la actividad HTTP en las rutas `/countries` y `/travel-plans`.
+
+#### Ubicación
+`src/common/middleware/logging.middleware.ts`
+
+#### Información Registrada
+Para cada petición, el middleware registra:
+- **Método HTTP**: GET, POST, DELETE, etc.
+- **Ruta solicitada**: URL completa
+- **Código de estado**: 200, 201, 404, 401, etc.
+- **Tiempo de procesamiento**: Duración total en milisegundos
+
+#### Ejemplo de Log
+```
+[HTTP] GET /countries - Status: 200 - 45ms
+[HTTP] POST /travel-plans - Status: 201 - 123ms
+[HTTP] DELETE /countries/USA - Status: 401 - 12ms
+[HTTP] DELETE /countries/USA - Status: 204 - 78ms
+```
+
+## Cómo Validar la Implementación
+
+### Validar el Endpoint Protegido
+
+#### 1. Probar sin token (debe fallar con 401)
+```bash
+curl -X DELETE http://localhost:3000/countries/USA
+```
+**Respuesta esperada**: `401 Unauthorized`
+```json
+{
+  "statusCode": 401,
+  "message": "Token de acceso inválido o no proporcionado"
+}
+```
+
+#### 2. Probar con token incorrecto (debe fallar con 401)
+```bash
+curl -X DELETE http://localhost:3000/countries/USA -H "X-API-TOKEN: token-incorrecto"
+```
+**Respuesta esperada**: `401 Unauthorized`
+
+#### 3. Probar con token correcto en país inexistente (debe fallar con 404)
+```bash
+curl -X DELETE http://localhost:3000/countries/XXX -H "X-API-TOKEN: mi-token-secreto"
+```
+**Respuesta esperada**: `404 Not Found`
+```json
+{
+  "statusCode": 404,
+  "message": "País con código XXX no encontrado en la caché"
+}
+```
+
+#### 4. Probar eliminación exitosa
+```bash
+# Primero, obtener un país para agregarlo a la caché
+curl http://localhost:3000/countries/USA
+
+# Luego, eliminar el país (sin planes asociados)
+curl -X DELETE http://localhost:3000/countries/USA -H "X-API-TOKEN: mi-token-secreto"
+```
+**Respuesta esperada**: `204 No Content` (sin cuerpo de respuesta)
+
+#### 5. Probar eliminación con planes asociados (debe fallar con 400)
+```bash
+# Primero, crear un plan de viaje
+curl -X POST http://localhost:3000/travel-plans \
+  -H "Content-Type: application/json" \
+  -d '{
+    "countryCode": "USA",
+    "title": "Viaje a Nueva York",
+    "startDate": "2025-12-01",
+    "endDate": "2025-12-10",
+    "notes": "Visitar Manhattan"
+  }'
+
+# Intentar eliminar el país
+curl -X DELETE http://localhost:3000/countries/USA -H "X-API-TOKEN: mi-token-secreto"
+```
+**Respuesta esperada**: `400 Bad Request`
+```json
+{
+  "statusCode": 400,
+  "message": "No se puede eliminar el país USA porque tiene planes de viaje asociados"
+}
+```
+
+### Validar el Guard
+
+El Guard se valida automáticamente al intentar usar el endpoint DELETE:
+
+1. **Sin token**: Verifica que devuelve 401
+2. **Token incorrecto**: Verifica que devuelve 401
+3. **Token correcto**: Verifica que permite el acceso (puede devolver 204, 404, o 400 según el caso)
+
+### Validar el Middleware de Logging
+
+#### 1. Iniciar la aplicación
+```bash
+npm run start:dev
+```
+
+#### 2. Observar la consola mientras realizas peticiones
+Ejecuta cualquier petición a las rutas protegidas:
+
+```bash
+# Obtener todos los países
+curl http://localhost:3000/countries
+
+# Obtener un país específico
+curl http://localhost:3000/countries/USA
+
+# Crear un plan de viaje
+curl -X POST http://localhost:3000/travel-plans \
+  -H "Content-Type: application/json" \
+  -d '{
+    "countryCode": "USA",
+    "title": "Viaje de prueba",
+    "startDate": "2025-12-01",
+    "endDate": "2025-12-10"
+  }'
+
+# Intentar eliminar un país
+curl -X DELETE http://localhost:3000/countries/USA -H "X-API-TOKEN: mi-token-secreto"
+```
+
+#### 3. Verificar los logs en la consola
+```
+[HTTP] GET /countries - Status: 200 - 45ms
+[HTTP] GET /countries/USA - Status: 200 - 32ms
+[HTTP] POST /travel-plans - Status: 201 - 156ms
+[HTTP] DELETE /countries/USA - Status: 400 - 89ms
+```
+
+Cada log muestra:
+- Método HTTP usado
+- Ruta completa
+- Código de estado de la respuesta
+- Tiempo de procesamiento en milisegundos
+
+### Modificaciones Realizadas
+- **CountriesController**: Agregado endpoint DELETE con Guard
+- **CountriesService**: Método `deleteCountry` con validaciones
+- **TravelPlansService**: Método `hasPlansForCountry` para verificar asociaciones
+- **CountriesModule**: Importación circular con TravelPlansModule usando `forwardRef`
+- **TravelPlansModule**: Exportación de TravelPlansService
+- **AppModule**: Configuración del middleware para rutas específicas
+

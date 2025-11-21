@@ -66,6 +66,14 @@ export class TravelPlansService {
     return this.mapToResponseDto(plan);
   }
 
+  async hasPlansForCountry(countryCode: string): Promise<boolean> {
+    const normalizedCode = countryCode.toUpperCase();
+    const count = await this.travelPlanRepository.count({
+      where: { countryCode: normalizedCode },
+    });
+    return count > 0;
+  }
+
   private mapToResponseDto(plan: TravelPlan): TravelPlanResponseDto {
     return {
       id: plan.id,
